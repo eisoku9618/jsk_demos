@@ -578,7 +578,7 @@
     (send *ri* :angle-vector (send *robot* :angle-vector)
           time)
     (send *ri* :wait-interpolation)
-  )
+  ))
 
 (defun fill-footstep-dimensions (footstep)
   (send footstep :dimensions :z 0.001)
@@ -599,7 +599,7 @@
    ))
 
 ;; for emergency, currently support only jaxon and jaxon_red
-(defun move-to-emergency-pose (&key (initial-pose nil))
+(defun move-to-emergency-pose (&key (initial-pose t) (ratio 1.5))
   (progn
     (send *ri* :stop-impedance :arms)
     (send *ri* :start-grasp))
@@ -608,7 +608,9 @@
     (progn
       (send *robot* :reset-pose)
       (send *robot* :fix-leg-to-coords (make-coords))
-      (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
+      (send *irtviewer* :draw-objects)
+      (y-or-n-p "next? initial pose")
+      (send *ri* :angle-vector (send *robot* :angle-vector) (* 5000 ratio))
       (send *ri* :wait-interpolation)))
   ;; squat pose
   (progn
@@ -627,13 +629,17 @@
     (send *robot* :move-centroid-on-foot :both '(:rleg :lleg :larm :rarm)
           :root-link-virtual-joint-weight #f(0.1 0.1 0.8 0.1 0.5 0.5)
           :target-centroid-pos (v+ (apply #'midpoint 0.5 (send *robot* :legs :end-coords :worldpos)) (float-vector 20 0 0)))
-    (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
+    (send *irtviewer* :draw-objects)
+    (y-or-n-p "next? squat pose crane ganbatte")
+    (send *ri* :angle-vector (send *robot* :angle-vector) (* 5000 ratio))
     (send *ri* :wait-interpolation))
   ;; move centroid forward
   (progn
     (send *robot* :fix-leg-to-coords (make-coords))
     (send *robot* :move-centroid-on-foot :both '(:rleg :lleg :larm :rarm) :target-centroid-pos (float-vector 30 0 0))
-    (send *ri* :angle-vector (send *robot* :angle-vector) 500)
+    (send *irtviewer* :draw-objects)
+    (y-or-n-p "next? move centroid")
+    (send *ri* :angle-vector (send *robot* :angle-vector) (* 500 ratio))
     (send *ri* :wait-interpolation))
   ;; four leg mode
   (let* ((z-pos (send-all (send *robot* :arms :end-coords) :worldpos))
@@ -658,9 +664,12 @@
            :root-link-virtual-joint-weight #f(0.8 0.1 0.8 0.1 0.8 0.5)
            :target-centroid-pos (v+ (apply #'midpoint 0.5 (send *robot* :legs :end-coords :worldpos)) (float-vector 100 0 0))
            :debug-view :no-message))
-    (send *ri* :angle-vector (send *robot* :angle-vector) 2000)
+    (send *irtviewer* :draw-objects)
+    (y-or-n-p "next? touch arms")
+    (send *ri* :angle-vector (send *robot* :angle-vector) (* 2000 ratio))
     (send *ri* :wait-interpolation))
   ;; stop st / abc
+  (y-or-n-p "next? stop st and abc dangerous")
   (progn
     (send *ri* :stop-st)
     (send *ri* :stop-auto-balancer))
@@ -674,6 +683,8 @@
                                    (float-vector 150 0 0))
           :centroid-thre 10
           :debug-view :no-message)
-    (send *ri* :angle-vector (send *robot* :angle-vector) 3000)
+    (send *irtviewer* :draw-objects)
+    (y-or-n-p "next? fin")
+    (send *ri* :angle-vector (send *robot* :angle-vector) (* 3000 ratio))
     (send *ri* :wait-interpolation))
   )
