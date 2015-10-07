@@ -26,6 +26,31 @@
   (warning-message 2 "[walk-to-object] initialize walk-to-object.~%")
   )
 
+(defun go-pos-new
+  (x y th)
+  (let* ((ggp (send *ri* :get-gait-generator-param))
+         (step-time (send ggp :default_step_time))
+         (step-height (* (send ggp :default_step_height) 1e3))
+         (toe-angle (send ggp :toe_angle))
+         (heel-angle (send ggp :heel_angle))
+         (stride-param (send ggp :stride_parameter))
+         (fsl (send *robot* :go-pos-params->footstep-list
+                    (* x 1000) (* y 1000) th
+                    :footstep-parameter (list :default-half-offset (float-vector 0
+                                                                                 (* (elt (send (send ggp :leg_default_translate_pos) :data) 4) 1e3)
+                                                                                 0)
+                                              :forward-offset-length (* (elt stride-param 0) 1e3)
+                                              :outside-offset-length (* (elt stride-param 1) 1e3)
+                                              :rotate-rad (deg2rad (elt stride-param 2)))
+                    )))
+    (send *ri* :set-foot-steps-with-param
+          fsl
+          (append (list 0) (make-list (- (length fsl) 1) :initial-element step-height))
+          (make-list (length fsl) :initial-element step-time)
+          (append (list 0) (make-list (- (length fsl) 1) :initial-element toe-angle))
+          (append (list 0) (make-list (- (length fsl) 1) :initial-element heel-angle)))
+    ))
+
 (defun walk-to-object-one
   ()
   (warning-message 2 "[walk-to-object] send go-pos command~%")
@@ -58,7 +83,8 @@
         (cond
          ;; when robot-interface is available (FC)
          (*use-robot-interface-flag*
-          (send *ri* :go-pos dest-x dest-y dest-yaw))
+          ;; (send *ri* :go-pos dest-x dest-y dest-yaw)
+          (go-pos-new dest-x dest-y dest-yaw))
          ;; when robot-interface is not available (OCS)
          (t
           (ros::service-call "go_pos_command_from_rviz_interface"
